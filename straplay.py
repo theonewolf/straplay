@@ -46,7 +46,7 @@ strace.log\''''
 
 START_RE= '(\d+)[ ]+(\d+)\.(\d+) '
 END_RE  = ' = (?:(\d+)|(-\d+) (.*))'
-DEBUG=True
+DEBUG=False
 
 class Event(object):
     def __init__(self): pass
@@ -299,12 +299,12 @@ def replay_strace(events):
 
 if __name__ == '__main__':
     parser = ArgumentParser(description=DESC)
-    parser.add_argument('strace log file',
+    parser.add_argument('strace_log_file',
                         help='file containing strace output')
 
     args = parser.parse_args()
 
-    strace_data       = read_strace_file(args.__dict__['strace log file'])
+    strace_data       = read_strace_file(args.strace_log_file)
     parsed_data       = parse_strace_data(strace_data)
 
     replay_strace(parsed_data)
