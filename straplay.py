@@ -138,7 +138,6 @@ class OpenEvent(Event):
             else:
                 ret = os.open(self.fname, self.flags)
         except Exception as e:
-            raise
             assert self.retval < 0
             errorstr = '%s (%s)' % (errorcode[e.errno], os.strerror(e.errno))
             assert errorstr == self.errorstr
@@ -172,7 +171,7 @@ class CloseEvent(Event):
         ret = None
         try:
             ret = os.close(self.fd)
-            if ret == None: ret = 0
+            if ret is None: ret = 0
         except Exception as e:
             assert self.retval < 0
             errorstr = '%s (%s)' % (errorcode[e.errno], os.strerror(e.errno))
@@ -209,12 +208,13 @@ class Dup2Event(Event):
         ret = None
         try:
             ret = os.dup2(self.fd1, self.fd2)
+            if ret is None: ret = 0
         except:
             assert self.retval < 0
             errorstr = '%s (%s)' % (errorcode[e.errno], os.strerror(e.errno))
             assert errorstr == self.errorstr
             return
-        assert ret == self.retval or ret == None
+        assert ret == self.retval
         files[self.fd2] = self.fname1
 
     @classmethod
