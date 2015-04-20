@@ -66,6 +66,7 @@ class Event(object):
         if etype == 'close': event = CloseEvent.from_re(groups[4:-3])
         if etype == 'dup2':  event = Dup2Event.from_re(groups[4:-3])
         if etype == 'lseek': event = LseekEvent.from_re(groups[4:-3])
+        if etype == 'fsync': event = FsyncEvent.from_re(groups[4:-3])
 
         event.pid          = int(pid)
         event.etype        = etype
@@ -266,6 +267,39 @@ class LseekEvent(Event):
         return '%s(%d<%s>, %d, %d)' % (self.etype, self.fd, self.fname,
                                        self.position, self.flags)
 
+class FsyncEvent(Event):
+    #9775  1429499443.608683 fsync(3</tmp/test.db>) = 0
+    RE=recompile(START_RE + '''(fsync)\((\d+)<(.*)>\)''' + END_RE)
+
+    def __init__(self, fd, fname):
+        super(Event, self)
+
+        self.fd = fd
+        self.fname = fname
+
+    def do_event(self, files):
+        ret = None
+        try:
+            ret = os.fsync(self.fd)
+            if ret is None: ret = 0
+        except Exception as e:
+            assert self.retval < 0
+            errorstr = '%s (%s)' % (errorcode[e.errno], os.strerror(e.errno))
+            assert errorstr == self.errorstr
+            return
+        assert ret == self.retval
+
+    @classmethod
+    def from_re(cl, groups):
+        fd, fname = groups
+
+        fd = int(fd)
+
+        return FsyncEvent(fd, fname)
+
+    def __str__(self):
+        return '%s(%d<%s>)' % (self.etype, self.fd, self.fname)
+
 def read_strace_file(fname):
     with open(fname, 'r') as fd:
         return [l.strip() for l in fd.readlines()]
@@ -277,15 +311,17 @@ def parse_strace_data(strace_data):
                     CloseEvent.RE.match(l),
                     OpenEvent.RE.match(l),
                     Dup2Event.RE.match(l),
-                    LseekEvent.RE.match(l))
+                    LseekEvent.RE.match(l),
+                    FsyncEvent.RE.match(l))
         
         if event is not None: events.append(Event.from_re(event))
 
-        if ' open(' in l:  assert type(events[-1]).__name__ == 'OpenEvent' 
+        if ' open('  in l: assert type(events[-1]).__name__ == 'OpenEvent' 
         if ' write(' in l: assert type(events[-1]).__name__ == 'WriteEvent'
         if ' close(' in l: assert type(events[-1]).__name__ == 'CloseEvent'
-        if ' dup2(' in l: assert type(events[-1]).__name__ == 'Dup2Event'
+        if ' dup2('  in l: assert type(events[-1]).__name__ == 'Dup2Event'
         if ' lseek(' in l: assert type(events[-1]).__name__ == 'LseekEvent'
+        if ' fsync(' in l: assert type(events[-1]).__name__ == 'FsyncEvent'
 
     return events
 
