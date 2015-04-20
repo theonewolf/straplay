@@ -44,8 +44,10 @@ DESC='''straplay -- replays strace captures
     expects output to be formatted a la \'strace -ttt -v -y -xx -s 33554432 -f -o \
 strace.log\''''
 
-START_RE= '(\d+)[ ]+(\d+)\.(\d+) '
-END_RE  = ' = (?:(\d+)|(-\d+) (.*))'
+START_RE  = '(\d+)[ ]+(\d+)\.(\d+) '
+END_RE    = '[ ]+= (?:(\d+)|(-\d+) (.*))'
+SOCKET_RE = 'socket:\[\d+\]'
+SOCKET_REC= recompile(SOCKET_RE)
 DEBUG=False
 
 class Event(object):
@@ -165,6 +167,7 @@ class CloseEvent(Event):
         self.fname  = fname
 
     def do_event(self, files):
+        if SOCKET_REC.match(self.fname) is not None: return
         ret = None
         try:
             ret = os.close(self.fd)
