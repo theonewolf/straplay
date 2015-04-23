@@ -268,6 +268,9 @@ class OpenEvent(Event):
 
         return OpenEvent(fname, flags, mode, flags2)
 
+    def __str__(self):
+        return '%s(<%s>)' % (self.etype, self.fname)
+
 class CloseEvent(Event):
     # 2945  1429043620.209347 close(1</dev/null>) = 0
     RE=recompile(START_RE + '''(close)\((\d+)\<(.*)\>\)''' + END_RE)
