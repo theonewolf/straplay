@@ -8,6 +8,7 @@ import os
 
 from argparse import ArgumentParser
 from errno import errorcode
+from gzip import GzipFile
 from os import O_APPEND,     \
                O_ASYNC,      \
                O_CREAT,      \
@@ -28,6 +29,7 @@ from os import O_APPEND,     \
                SEEK_SET,     \
                SEEK_CUR,     \
                SEEK_END
+from os.path import splitext
 from re import compile as recompile
 from time import sleep
 
@@ -411,8 +413,13 @@ class FsyncEvent(Event):
         return '%s(%d<%s>)' % (self.etype, self.fd, self.fname)
 
 def read_strace_file(fname):
-    with open(fname, 'r') as fd:
-        return [l.strip() for l in fd.readlines()]
+    _, ext = splitext(fname)
+    if ext == '.gz':
+        with GzipFile(fname, 'r') as fd:
+            return [l.decode('latin1').strip() for l in fd.readlines()]
+    else:
+        with open(fname, 'r') as fd:
+            return [l.strip() for l in fd.readlines()]
 
 def parse_strace_data(strace_data):
     etypes = [WriteEvent, CloseEvent, OpenEvent, Dup2Event, LseekEvent,
