@@ -4,6 +4,7 @@
 from sqlite3 import connect
 from os.path import exists
 from random import randint
+from sys import argv
 
 DB_FNAME        =   'test.db'
 SCHEMA_FNAME    =   'schema.sql'
@@ -27,7 +28,7 @@ def run_random_workload(n, dbfname):
 
     with connect(dbfname) as conn:
         for _ in xrange(n):
-            id = randint(1, 1000)
+            id = randint(1, n)
             rn = randint(0,4000000)
 
             conn.execute(UPDATE_SQL % (rn, id))
@@ -35,7 +36,9 @@ def run_random_workload(n, dbfname):
 
 if __name__ == '__main__':
 
+    trials = int(argv[1])
+
     if not exists(DB_FNAME):
         create_db(SCHEMA_FNAME, DB_FNAME)
     
-    run_random_workload(1000, DB_FNAME)
+    run_random_workload(trials, DB_FNAME)
