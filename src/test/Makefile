@@ -8,7 +8,7 @@ default:
 		-s 33554432 \
 		-f \
 		-o strace.log \
-		./test-sqlite3.py 100000
+		./test-sqlite3.py 10000
 	mv test.db test-original.db
 	time ./straplay.py strace.log
 	diff test.db test-original.db
