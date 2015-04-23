@@ -4,6 +4,10 @@
 
 
 import os
+
+
+from argparse import ArgumentParser
+from errno import errorcode
 from os import O_APPEND,     \
                O_ASYNC,      \
                O_CREAT,      \
@@ -24,13 +28,8 @@ from os import O_APPEND,     \
                SEEK_SET,     \
                SEEK_CUR,     \
                SEEK_END
-from errno import errorcode
-
-
-
-
-from argparse import ArgumentParser
 from re import compile as recompile
+from time import sleep
 
 
 
@@ -448,7 +447,14 @@ def replay_strace(events):
         if DEBUG:
             print('Running event: %s' % (event))
             print('\tFiles: %s' % (files))
+
+        time = event.timestamp * 10e6 + event.microseconds
+        if lasttime is not None:
+            if DEBUG: print('sleeping: %f' % ((time - lasttime) / 10e6))
+            sleep((time - lasttime) / 10e6)
         event.do_event(files)
+        lasttime = time
+
         if DEBUG: print('\tFiles now: %s' % (files))
 
 if __name__ == '__main__':
