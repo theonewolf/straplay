@@ -30,6 +30,8 @@ from os import O_APPEND,     \
                SEEK_CUR,     \
                SEEK_END
 from os.path import splitext
+from random import normalvariate, randint, seed
+assert os.close(3) is None # random opens up /dev/urandom, but doesn't need it
 from re import compile as recompile
 from time import sleep
 
@@ -50,7 +52,6 @@ START_RE  = '''(\d+)[ ]+(\d+)\.(\d+) '''
 END_RE    = '''[ ]+= (?:(\d+)|(-\d+) (.*))'''
 SOCKET_RE = '''socket:\[\d+\]'''
 SOCKET_REC= recompile(SOCKET_RE)
-DEBUG=False
 
 class Event(object):
     def __init__(self): pass
@@ -449,9 +450,11 @@ def parse_strace_data(strace_data):
 
     return events
 
-def replay_strace(events):
+def replay_strace(events, theseed, sigma, mu, percent):
     lasttime = None
     files = {0 : 'stdout', 1 : 'stdin', 2 : 'stderr'}
+
+    if theseed is not None: seed(theseed)
 
     for event in events:
         if DEBUG:
@@ -459,22 +462,40 @@ def replay_strace(events):
             print('\tFiles: %s' % (files))
 
         time = event.timestamp * 10e6 + event.microseconds
+
         if lasttime is not None:
-            if DEBUG: print('sleeping: %f' % ((time - lasttime) / 10e6))
-            sleep((time - lasttime) / 10e6)
+            sleeptime = (time - lasttime) / 10e6
+            if mu is not None and sigma is not None:
+                if randint(0,100) < percent:
+                    sleeptime += abs(normalvariate(mu, sigma))
+            if DEBUG: print('sleeping: %f' % (sleeptime))
+            sleep(sleeptime)
+
         event.do_event(files)
         lasttime = time
 
         if DEBUG: print('\tFiles now: %s' % (files))
 
 if __name__ == '__main__':
+    global DEBUG
+
     parser = ArgumentParser(description=DESC)
     parser.add_argument('strace_log_file',
                         help='file containing strace output')
-
+    parser.add_argument('--seed', help='random seed value for RNG', type=int)
+    parser.add_argument('--sigma', help='sigma for adding normally ' + 
+                                        'distributed time', type=float)
+    parser.add_argument('--mu', help='mu for adding normally distributed ' +
+                                     'time between syscalls', type=float)
+    parser.add_argument('--percent', help='desired percent of slowed ' +
+                                          'syscalls', type=int, default=25)
+    parser.add_argument('--debug', help='activate debugging messages',
+                                   action="store_true", default=False)
     args = parser.parse_args()
+
+    DEBUG = args.debug
 
     strace_data       = read_strace_file(args.strace_log_file)
     parsed_data       = parse_strace_data(strace_data)
 
-    replay_strace(parsed_data)
+    replay_strace(parsed_data, args.seed, args.sigma, args.mu, args.percent)
